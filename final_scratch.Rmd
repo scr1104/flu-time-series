@@ -1,0 +1,163 @@
+---
+title: "Sta457 Final Project"
+author: "Chaerin Song"
+date: "10/04/2021"
+output: pdf_document
+---
+
+```{r}
+library(astsa)
+library(forecast)
+library(tseries)
+library(TSA)
+plot(flu)
+transformed<- 1/flu
+differenced <- diff(transformed, 12)
+plot(transformed)
+plot(differenced)
+acf(transformed)
+acf(differenced)
+acf(diff(differenced))
+adf.test(differenced)
+acf2(differenced, 20) # non seasonal ACF tails off, seasonal tails off at 12
+#non seasonal PACF cuts off after 2, seasonal PACF tails off
+#Since the seasonal ACF tails off and seaonal PACF tails off, use seasonal ARMA model
+#Since non-seasonal ACF tais off and PACF cuts off, use non-seaonal AR
+#Use 1 seasonal difference at 52 weeks and 0 non-seaonal difference
+```
+
+
+```{r}
+data <- data_test
+fit1 <- sarima(data, 2, 0, 0, 1, 1, 1, 12)
+fit4 <- sarima(data, 2, 0, 0, 0, 1, 1, 12)
+fit5 <- sarima(data, 2, 0, 0, 0, 1, 2, 12)
+
+fit1
+fit4
+fit5
+```
+
+```{r}
+fit1$AICc
+fit1$BIC
+fit4$AICc
+fit4$BIC
+fit5$AICc
+fit5$BIC
+```
+
+
+```{r}
+data_test <- BoxCox(transformed, 0.25)
+plot(data_test)
+differenced_test <- diff(data_test, 12)
+plot(data)
+plot(differenced)
+plot(differenced_test)
+acf2(differenced_test)
+acf2(differenced)
+acf(differenced_test)
+sarima(data_test, 2, 0, 0, 0, 1, 1, 12)
+```
+
+
+```{r}
+data <- transformed
+fit1 <- sarima(data, 2, 1, 0, 1, 1, 1, 12)
+fit2 <- sarima(data, 2, 1, 0, 1, 1, 2, 12)
+fit3 <- sarima(data, 2, 1, 0, 2, 1, 1, 12)
+fit4 <- sarima(data, 2, 1, 0, 2, 1, 2, 12)
+fit5 <- sarima(data, 2, 1, 0, 1, 1, 0, 12)
+fit6 <- sarima(data, 2, 1, 0, 0, 1, 1, 12)
+
+fit1
+fit2
+fit3
+fit4
+fit5
+fit6
+
+```
+
+
+```{r}
+fore <- sarima.for(data, n.ahead=12, p=2, d=0, q=0, P=, D=1, Q=1, S=12)
+fore
+Lower <- fore$pred + pnorm(0.025)*fore$se
+Upper <- fore$pred + pnorm(0.975)*fore$se
+CI <- cbind(Lower, Upper)
+CI
+```
+
+
+```{r}
+library(Ecfun)
+var(flu)
+newfore <- 1/invBoxCox(fore$pred, 0.25)
+newse <- 1/invBoxCox(fore$se, 0.25)
+newfore
+Upper1 <- 1/invBoxCox(fore$pred + pnorm(0.025)* fore$se, 0.25)
+Lower1 <- 1/invBoxCox(fore$pred + pnorm(0.975)* fore$se, 0.25)
+CI1 <- cbind(Lower1, Upper1)
+CI1
+```
+
+
+SARIMA(2,0,0)x(0,1,1)_12
+
+```{r}
+fit6
+```
+
+```{r}
+length(data)
+```
+
+
+```{r}
+
+P = Mod(2*fft(flu)/132)^2
+Fr = 1:132/132
+sort(P)
+plot(Fr, P, type='o', xlab="frequency", ylab="scaled periodogram")
+```
+
+```{r}
+
+flu.per = mvspec(flu, log="no")
+n = length(flu)
+Per = Mod(fft(flu-mean(flu)))^2/n
+Freq = (1:n - 1)/n
+u = which.max(Per[1:50])
+uu = which.max(Per[1:50][-u])
+y = cbind(1:50, Freq[1:50], Per[1:50])
+y[order(y[,3]),]
+rev(y[order(y[,3]),][48:50,])
+```
+
+```{r}
+
+flu.per$spec[11] # 0.0374; salt pgram at freq 1/12 = 11/132
+flu.per$spec[22] # 0.007814; salt pgram at freq 1/6 = 22/132
+
+# confidence intervals
+U = qchisq(0.025, 2) # 0.05063
+L = qchisq(0.975, 2) # 7.37775
+L1 <- 2 * flu.per$spec[11]/L # 0.01015
+U1 <- 2 * flu.per$spec[11]/U # 1.47903
+L2 <- 2 * flu.per$spec[22]/L # 0.00212
+U2 <- 2 * flu.per$spec[22]/U # 0.30863
+
+L1
+U1
+L2
+U2
+```
+
+```{r}
+summary(flu)
+BoxCox.lambda(flu)
+```
+
+
